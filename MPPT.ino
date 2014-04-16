@@ -35,39 +35,39 @@
 //------------------------------------------------------------------------------------------------------
 // definitions
 //------------------------------------------------------------------------------------------------------
-#define LED_POWER_PIN 5                   // LED connected to power, yellow, blinks when power is on
-#define LED_CHARGE_PIN 4                   // LED connected to charge, light when charger on
-#define BUTTON_PIN A3                       // pin for button arduino shield
+#define LED_POWER_PIN 5              // LED connected to power, yellow, blinks when power is on
+#define LED_CHARGE_PIN 4             // LED connected to charge, light when charger on
+#define BUTTON_PIN A3                // pin for button arduino shield
 #define OLED_CS_PIN 7
 #define OLED_DC_PIN 2
 #define OLED_RESET_PIN 3
-#define SOL_AMPS_PIN A0               // the adc channel to read solar amps
-#define SOL_VOLTS_PIN A1               // the adc channel to read solar volts
-#define BAT_VOLTS_PIN A2              // the adc channel to read battery volts
-#define AVG_NUM 20                      // number of iterations of the adc routine to average the adc readings
-#define SOL_AMPS_MAX 30             // max rating of the ACS712 sensor in use
-#define SOL_VOLTS_SCALE 53.8            // the scaling value for raw adc reading to get solar volts, based on voltage divider, in mV
-#define BAT_VOLTS_SCALE 27            // the scaling value for raw adc reading to get battery volts, based on voltage divider, in mV
+#define SOL_AMPS_PIN A0              // the adc channel to read solar amps
+#define SOL_VOLTS_PIN A1             // the adc channel to read solar volts
+#define BAT_VOLTS_PIN A2             // the adc channel to read battery volts
+#define AVG_NUM 20                   // number of iterations of the adc routine to average the adc readings
+#define SOL_AMPS_SCALE 66            // how many mv per A for the ACS712 30A
+#define SOL_VOLTS_SCALE 10.98        // the scaling value for raw adc reading to get solar volts, based on voltage divider, in mV
+#define BAT_VOLTS_SCALE 10.98        // the scaling value for raw adc reading to get battery volts, based on voltage divider, in mV
 #define PWM_PIN 9                    // the output pin for the pwm
-#define PWM_ENABLE_PIN 8            // pin used to control shutoff function of the IR2104 MOSFET driver
+#define PWM_ENABLE_PIN 8             // pin used to control shutoff function of the IR2104 MOSFET driver
 #define PWM_FULL 1022                // the actual value used by the Timer1 routines for 100% pwm duty cycle
-#define PWM_MAX 99                  // the value for pwm duty cyle 0-100%
-#define PWM_MIN 60                  // the value for pwm duty cyle 0-100%
-#define PWM_START 90                // the value for pwm duty cyle 0-100%
-#define PWM_INC 1                    //the value the increment to the pwm value for the ppt algorithm
+#define PWM_MAX 99                   // the value for pwm duty cyle 0-100%
+#define PWM_MIN 60                   // the value for pwm duty cyle 0-100%
+#define PWM_START 90                 // the value for pwm duty cyle 0-100%
+#define PWM_INC 1                    // the value the increment to the pwm value for the ppt algorithm
 #define TRUE 1
 #define FALSE 0
 #define ON TRUE
 #define OFF FALSE
 #define TURN_ON_MOSFETS digitalWrite(PWM_ENABLE_PIN, HIGH)      // enable MOSFET driver
 #define TURN_OFF_MOSFETS digitalWrite(PWM_ENABLE_PIN, LOW)      // disable MOSFET driver
-#define ONE_SECOND 50000             //count for number of interrupt in 1 second on interrupt period of 20us
-#define LOW_SOL_WATTS 100            //value of solar watts scaled by 100 so this is 1.00 watts
-#define MIN_SOL_WATTS 50            //value of solar watts scaled by 100 so this is 0.5 watts
-#define MIN_BAT_VOLTS 1100          //value of battery voltage scaled by 100 so this is 11.00 volts          
-#define MAX_BAT_VOLTS 1410          //value of battery voltage scaled by 100 so this is 14.10 volts  
-#define HIGH_BAT_VOLTS 1300          //value of battery voltage scaled by 100 so this is 13.00 volts  
-#define OFF_NUM 1                  // number of iterations of off charger state
+#define ONE_SECOND 50000             // count for number of interrupt in 1 second on interrupt period of 20us
+#define LOW_SOL_WATTS 100            // value of solar watts scaled by 100 so this is 1.00 watts
+#define MIN_SOL_WATTS 50             // value of solar watts scaled by 100 so this is 0.5 watts
+#define MIN_BAT_VOLTS 1100           // value of battery voltage scaled by 100 so this is 11.00 volts          
+#define MAX_BAT_VOLTS 1410           // value of battery voltage scaled by 100 so this is 14.10 volts  
+#define HIGH_BAT_VOLTS 1300          // value of battery voltage scaled by 100 so this is 13.00 volts  
+#define OFF_NUM 1                    // number of iterations of off charger state
 #define OLED_LABEL_POS_X 0
 #define OLED_VALUE_POS_X 48
 
@@ -219,7 +219,7 @@ void set_pwm_duty(void) {
 }
 												
 //------------------------------------------------------------------------------------------------------
-// This routine prints all the data out to the serial port.
+// This routine prints all the data out to the serial port and OLED display
 // Next techmind version incl. ethernet connection and datalogging in mysql database
 // It will be made with code from solardatalogger: http://techmind.dk/arduino-singleboard/solcelle-datalogger/
 //------------------------------------------------------------------------------------------------------
@@ -295,14 +295,12 @@ void print_data(void) {
 //------------------------------------------------------------------------------------------------------
 void read_data(void) {
   long adc_step; //used to store current ADC step value in mV
-  vcc_volts = readVcc();
-  adc_step = 1023/vcc_volts;
-  Serial.println(int100_to_string(vcc_volts));
-  Serial.println(int100_to_string(adc_step));
-  //sol_amps =  ((read_adc(SOL_AMPS_PIN)  * SOL_AMPS_SCALE) + 5) / 10;    //input of solar amps result scaled by 100
-  sol_amps =  vcc_volts;    //input of solar amps result scaled by 100
-  sol_volts = ((read_adc(SOL_VOLTS_PIN) * SOL_VOLTS_SCALE) + 5) / 10;   //input of solar volts result scaled by 100
-  bat_volts = ((read_adc(BAT_VOLTS_PIN) * BAT_VOLTS_SCALE) + 5) / 10;   //input of battery volts result scaled by 100
+  vcc_volts = readVcc(); //read Arduino's current Vcc value
+  adc_step = 1023/vcc_volts; //work out how many volts per ADC step for calculating voltage from analogRead returns
+  //input of solar amps, multiplied by adc_step to get volts, subtract half of Vcc to get reading above zero (numbers less than this are negative accoring to ACS712 spec), scale volts to amps
+  sol_amps =  (((read_adc(SOL_AMPS_PIN)  * adc_step) - ((vcc_volts)/2)) * (SOL_AMPS_SCALE)); 
+  sol_volts = ((read_adc(SOL_VOLTS_PIN) * adc_step) * SOL_VOLTS_SCALE) / 10;   //input of solar volts result scaled by 100
+  bat_volts = ((read_adc(BAT_VOLTS_PIN) * adc_step) * BAT_VOLTS_SCALE) / 10;   //input of battery volts result scaled by 100
   sol_watts = (int)((((long)sol_amps * (long)sol_volts) + 50) / 100);    //calculations of solar watts scaled by 10000 divide by 100 to get scaled by 100                 
 }
 
