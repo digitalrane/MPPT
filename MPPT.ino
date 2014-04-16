@@ -20,6 +20,10 @@
 //    0.8b: 10/9-2012, acs714 5 amps current sensor added instead of max4173, to get ready to make more amps (30 amps) mppt charger and Electric viehicle chargers with 
 //    up to 48 (or maybee 120) volt batteri system voltage
 //------------------------------------------------------------------------------------------------------
+//   Further modifications and upload to github by James Hebden (james@hebden.net.au).
+//   Modified voltage and current calculation functions based on 1K/10K voltage dividers and the ACS712 30A hall effect sensor for current sending.
+//   Added LCD output of running variables.
+//------------------------------------------------------------------------------------------------------
 
 #include <SPI.h>
 #include <SD.h>
